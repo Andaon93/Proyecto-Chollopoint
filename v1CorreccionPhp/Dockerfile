@@ -23,6 +23,8 @@ RUN echo "upload_max_filesize = 20M" > /usr/local/etc/php/conf.d/uploads.ini \
 # Esto es necesario para que el .htaccess pueda redirigir las URLs a index.php
 RUN a2enmod rewrite
 
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true && a2enmod mpm_prefork
+
 # Permitimos que el .htaccess funcione en el directorio del proyecto
 # Por defecto Apache ignora los .htaccess; este comando lo activa
 RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
