@@ -15,11 +15,7 @@ RUN docker-php-ext-install pdo pdo_mysql
 RUN echo "upload_max_filesize = 20M" > /usr/local/etc/php/conf.d/uploads.ini \
  && echo "post_max_size = 20M" >> /usr/local/etc/php/conf.d/uploads.ini
 
-RUN rm -f /etc/apache2/mods-enabled/mpm_event.conf \
-          /etc/apache2/mods-enabled/mpm_event.load \
-          /etc/apache2/mods-enabled/mpm_worker.conf \
-          /etc/apache2/mods-enabled/mpm_worker.load \
- && a2enmod mpm_prefork rewrite
+RUN a2enmod rewrite
 
 RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
@@ -29,9 +25,4 @@ RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
 EXPOSE 80
 
-# Le damos los permisos correctos a los archivos
-# www-data es el usuario con el que corre Apache dentro del contenedor
-RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
-
-# Indicamos que el contenedor escucha en el puerto 80 (HTTP)
-EXPOSE 80
+CMD ["bash", "-c", "rm -f /etc/apache2/mods-enabled/mpm_event.conf /etc/apache2/mods-enabled/mpm_event.load /etc/apache2/mods-enabled/mpm_worker.conf /etc/apache2/mods-enabled/mpm_worker.load && a2enmod mpm_prefork && apache2-foreground"]
