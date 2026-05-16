@@ -17,10 +17,10 @@
 // Aquí indicamos desde qué direcciones se puede llamar a nuestra API.
 
 $origenesPermitidos = array(
-    'http://localhost:5173',   // Vite en desarrollo
-    'http://localhost:3000',   // Create React App en desarrollo
-    'http://localhost',        // Apache local sin puerto
-    'https://tudominio.com',   // ← Cambia esto por tu dominio real en producción
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost',
+    'https://gilded-gaufre-e2d152.netlify.app',
 );
 
 // El navegador envía su origen en la cabecera HTTP_ORIGIN
