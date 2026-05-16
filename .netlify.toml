@@ -1,6 +1,6 @@
 [build]
   base = "v1 correccion"
-  command = "npm install && npm run build"
+  command = "npm install && npx vite build"
   publish = "v1 correccion/dist"
 
 [[redirects]]
