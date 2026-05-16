@@ -32,6 +32,17 @@ const COLORES_AVATAR = [
   { bg: "linear-gradient(135deg, #00695c, #26a69a)", label: "Teal"    },
 ];
 
+const COLORES_CATEGORIAS = {
+  "Electrónica":  "#1976d2",
+  "Moda":         "#c2185b",
+  "Hogar":        "#6a1b9a",
+  "Alimentación": "#e65100",
+  "Deportes":     "#2e7d32",
+  "Viajes":       "#00695c",
+  "Servicios":    "#ffa726",
+  "Otros":        "#78909c",
+};
+
 const NIVELES = [
   { nombre: "Novato",      min: 0,    max: 99,       color: "#78909c", icon: "🌱" },
   { nombre: "Cazachollos", min: 100,  max: 299,      color: "#42a5f5", icon: "🔍" },
@@ -49,14 +60,6 @@ const BADGES = [
   { id: "explorador",    icono: "🗺️", nombre: "Explorador",      desc: "Usaste el mapa de chollos",            ganado: false },
   { id: "veterano",      icono: "⭐", nombre: "Veterano",        desc: "Llevas más de 30 días en la comunidad",ganado: false },
   { id: "top_chollo",    icono: "👑", nombre: "Top Chollo",      desc: "Un chollo tuyo llegó a 50 votos",      ganado: false },
-];
-
-const CATEGORIAS_FAVORITAS = [
-  { nombre: "Electrónica",  interacciones: 18, color: "#1976d2" },
-  { nombre: "Deportes",     interacciones: 12, color: "#2e7d32" },
-  { nombre: "Alimentación", interacciones: 9,  color: "#e65100" },
-  { nombre: "Hogar",        interacciones: 5,  color: "#6a1b9a" },
-  { nombre: "Moda",         interacciones: 3,  color: "#c2185b" },
 ];
 
 const PROVINCIAS = [
@@ -97,6 +100,20 @@ export default function Perfil() {
       .catch(() => {})
       .finally(() => setCargandoChollos(false));
   }, [usuario]);
+
+  // ✅ Categorías favoritas calculadas en tiempo real desde los chollos del usuario
+  const categoriasFavoritas = Object.entries(
+    misDeals.reduce((acc, d) => {
+      if (d.categoria) acc[d.categoria] = (acc[d.categoria] || 0) + 1;
+      return acc;
+    }, {})
+  )
+    .map(([nombre, interacciones]) => ({
+      nombre,
+      interacciones,
+      color: COLORES_CATEGORIAS[nombre] || "#78909c",
+    }))
+    .sort((a, b) => b.interacciones - a.interacciones);
 
   const [tNombre,      setTNombre]      = useState(usuario?.nombre      || "");
   const [tAlias,       setTAlias]       = useState(usuario?.alias       || "");
@@ -353,23 +370,36 @@ export default function Perfil() {
               </Stack>
             )}
 
+            {/* ✅ Categorías favoritas calculadas desde los chollos reales del usuario */}
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>❤️ Categorías favoritas</Typography>
-            <Stack spacing={1.5}>
-              {CATEGORIAS_FAVORITAS.map(cat => {
-                const maxInt = CATEGORIAS_FAVORITAS[0].interacciones;
-                const pct    = Math.round((cat.interacciones / maxInt) * 100);
-                return (
-                  <Box key={cat.nombre}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                      <Typography variant="body2" fontWeight="bold">{cat.nombre}</Typography>
-                      <Typography variant="caption" color="text.secondary">{cat.interacciones} interacciones</Typography>
+            {cargandoChollos ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress color="error" size={24} /></Box>
+            ) : categoriasFavoritas.length === 0 ? (
+              <Paper variant="outlined" sx={{ p: 3, textAlign: "center", borderRadius: 3 }}>
+                <Typography color="text.secondary">
+                  Publica chollos para ver tus categorías favoritas.
+                </Typography>
+              </Paper>
+            ) : (
+              <Stack spacing={1.5}>
+                {categoriasFavoritas.map(cat => {
+                  const maxInt = categoriasFavoritas[0].interacciones;
+                  const pct    = Math.round((cat.interacciones / maxInt) * 100);
+                  return (
+                    <Box key={cat.nombre}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight="bold">{cat.nombre}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {cat.interacciones} {cat.interacciones === 1 ? "chollo" : "chollos"}
+                        </Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={pct}
+                        sx={{ height: 8, borderRadius: 5, bgcolor: cat.color + "22", "& .MuiLinearProgress-bar": { bgcolor: cat.color, borderRadius: 5 } }} />
                     </Box>
-                    <LinearProgress variant="determinate" value={pct}
-                      sx={{ height: 8, borderRadius: 5, bgcolor: cat.color + "22", "& .MuiLinearProgress-bar": { bgcolor: cat.color, borderRadius: 5 } }} />
-                  </Box>
-                );
-              })}
-            </Stack>
+                  );
+                })}
+              </Stack>
+            )}
           </TabPanel>
 
           <TabPanel value={tabActual} index={2}>
