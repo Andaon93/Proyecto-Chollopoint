@@ -23,11 +23,13 @@ COPY . /var/www/html/
 
 RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
+RUN printf '#!/bin/bash\n\
+rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.*\n\
+a2enmod mpm_prefork\n\
+echo "Listen ${PORT:-80}" > /etc/apache2/ports.conf\n\
+sed -i "s/:80>/:${PORT:-80}>/g" /etc/apache2/sites-enabled/000-default.conf\n\
+exec apache2-foreground\n' > /start.sh && chmod +x /start.sh
+
 EXPOSE 80
 
-CMD ["bash", "-c", \
-  "rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && \
-   a2enmod mpm_prefork && \
-   sed -i \"s/Listen 80/Listen ${PORT:-80}/g\" /etc/apache2/ports.conf && \
-   sed -i \"s/:80>/:${PORT:-80}>/g\" /etc/apache2/sites-enabled/000-default.conf && \
-   apache2-foreground"]
+CMD ["/start.sh"]
