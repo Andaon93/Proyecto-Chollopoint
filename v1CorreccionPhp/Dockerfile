@@ -28,6 +28,11 @@ rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker
 a2enmod mpm_prefork\n\
 echo "Listen ${PORT:-80}" > /etc/apache2/ports.conf\n\
 sed -i "s/:80>/:${PORT:-80}>/g" /etc/apache2/sites-enabled/000-default.conf\n\
+echo "SetEnv MYSQLHOST ${MYSQLHOST}" >> /etc/apache2/apache2.conf\n\
+echo "SetEnv MYSQLPORT ${MYSQLPORT}" >> /etc/apache2/apache2.conf\n\
+echo "SetEnv MYSQLDATABASE ${MYSQLDATABASE}" >> /etc/apache2/apache2.conf\n\
+echo "SetEnv MYSQLUSER ${MYSQLUSER}" >> /etc/apache2/apache2.conf\n\
+echo "SetEnv MYSQLPASSWORD ${MYSQLPASSWORD}" >> /etc/apache2/apache2.conf\n\
 exec apache2-foreground\n' > /start.sh && chmod +x /start.sh
 
 EXPOSE 80
