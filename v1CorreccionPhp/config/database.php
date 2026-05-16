@@ -7,6 +7,11 @@
 
 // Datos de acceso a la base de datos
 // Estos valores deben coincidir con los del docker-compose.yml
+
+if (file_exists(__DIR__ . '/db_env.php')) {
+    require_once __DIR__ . '/db_env.php';
+}
+
 define('BD_SERVIDOR',    'db');
 define('BD_PUERTO',      '3306');
 define('BD_NOMBRE',      'chollopoint');
