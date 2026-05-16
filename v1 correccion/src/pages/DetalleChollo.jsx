@@ -183,8 +183,10 @@ function DetalleChollo() {
     if (navigator.clipboard !== undefined) await navigator.clipboard.writeText(window.location.href);
   }
 
+ 
   function handleIrALaOferta() {
-    window.open(chollo.enlace || "#", "_blank");
+    if (!chollo.enlace) return;
+    window.open(chollo.enlace, "_blank", "noopener,noreferrer");
   }
 
   async function handleEliminarChollo() {
@@ -358,10 +360,19 @@ function DetalleChollo() {
                 <Typography variant="h3" color="success.main" fontWeight="bold">{chollo.precioOferta}€</Typography>
                 <Typography sx={{ textDecoration: "line-through", color: "text.secondary", mt: 1 }}>{chollo.precioOriginal}€</Typography>
                 <Typography color="error" fontWeight="bold" sx={{ mt: 1 }}>Ahorras {ahorro}€</Typography>
-                <Button variant="contained" color="warning" fullWidth size="large"
-                  startIcon={<ShoppingCartIcon />} sx={{ mt: 3, fontWeight: "bold" }}
-                  onClick={handleIrALaOferta}>
-                  IR A LA OFERTA
+
+                
+                <Button
+                  variant="contained"
+                  color="warning"
+                  fullWidth
+                  size="large"
+                  startIcon={<ShoppingCartIcon />}
+                  sx={{ mt: 3, fontWeight: "bold" }}
+                  onClick={handleIrALaOferta}
+                  disabled={!chollo.enlace}
+                >
+                  {chollo.enlace ? "IR A LA OFERTA" : "Sin enlace disponible"}
                 </Button>
               </CardContent>
             </Card>
