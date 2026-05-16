@@ -1,5 +1,5 @@
 <?php
-// controllers/ChollosController.php
+
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/response.php';
@@ -85,20 +85,12 @@ class ChollosController
 
     public function crear()
     {
-        // 1. Validamos que el usuario esté logueado
-        // CORRECCIÓN: si comprobarSesionActiva() falla, devolvemos 401 explícito
-        // para que el frontend lo distinga de un error 400 de validación.
         $sesionUsuario = comprobarSesionActiva();
         if (!$sesionUsuario || empty($sesionUsuario['sub'])) {
             responderError('No autorizado', 401);
         }
         $idUsuario = (int) $sesionUsuario['sub'];
 
-        /**
-         * Cuando subes archivos, el navegador envía "multipart/form-data".
-         * En ese formato PHP llena $_POST automáticamente.
-         * Si no hay archivo (JSON puro), leemos php://input.
-         */
         $data = json_decode(file_get_contents("php://input"), true);
 
         if (!is_array($data)) {
@@ -118,15 +110,15 @@ class ChollosController
         $longitud        = isset($data['longitud'])        ? $data['longitud']                : null;
         $publicado_por   = isset($sesionUsuario['nombre']) ? $sesionUsuario['nombre']         : 'Anónimo';
 
-        // Validar que el título no esté vacío
         if (!$titulo || $titulo === '') {
             responderError("El campo 'titulo' es obligatorio");
         }
 
-        // Imagen genérica por defecto (no se admite subida de fotos)
-        $rutaImagen = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600";
+       
+        $rutaImagen = isset($data['imagen']) && trim($data['imagen']) !== ''
+            ? trim($data['imagen'])
+            : "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600";
 
-        // Calcular el porcentaje de descuento (ej: "-20%")
         $descuento = null;
         if ($precio_original > 0 && $precio_oferta > 0) {
             $porcentaje = round((1 - ($precio_oferta / $precio_original)) * 100);
@@ -168,11 +160,21 @@ class ChollosController
             responderError('No tienes permiso para editar este chollo', 403);
         }
 
+        
         $consultaUpdate = $bd->prepare(
-            'UPDATE chollos SET titulo = ?, descripcion = ?, precio_original = ?, precio_oferta = ?, tienda = ? WHERE id = ?'
+            'UPDATE chollos SET titulo = ?, descripcion = ?, precio_original = ?, precio_oferta = ?, tienda = ?, enlace = ?, imagen = ? WHERE id = ?'
         );
         $consultaUpdate->execute(array(
-            $data['titulo'], $data['descripcion'], $data['precio_original'], $data['precio_oferta'], $data['tienda'], $id
+            $data['titulo'],
+            $data['descripcion'],
+            $data['precio_original'],
+            $data['precio_oferta'],
+            $data['tienda'],
+            isset($data['enlace']) ? trim($data['enlace']) : '',
+            isset($data['imagen']) && trim($data['imagen']) !== ''
+                ? trim($data['imagen'])
+                : "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600",
+            $id
         ));
 
         responderExito(null, 'Chollo actualizado correctamente');
