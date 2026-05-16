@@ -7,11 +7,11 @@
 
 // Datos de acceso a la base de datos
 // Estos valores deben coincidir con los del docker-compose.yml
-define('BD_SERVIDOR',    'db');
-define('BD_PUERTO',      '3306');
-define('BD_NOMBRE',      'chollopoint');
-define('BD_USUARIO',     'chollouser');
-define('BD_CONTRASENA',  'chollopass');
+define('BD_SERVIDOR',    getenv('MYSQLHOST')     ?: 'db');
+define('BD_PUERTO',      getenv('MYSQLPORT')     ?: '3306');
+define('BD_NOMBRE',      getenv('MYSQLDATABASE') ?: 'chollopoint');
+define('BD_USUARIO',     getenv('MYSQLUSER')     ?: 'chollouser');
+define('BD_CONTRASENA',  getenv('MYSQLPASSWORD') ?: 'chollopass');
 define('BD_CODIFICACION','utf8mb4');
 
 
