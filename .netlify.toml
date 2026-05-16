@@ -1,0 +1,9 @@
+[build]
+  base = "v1 correccion"
+  command = "npm install && npm run build"
+  publish = "v1 correccion/dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
