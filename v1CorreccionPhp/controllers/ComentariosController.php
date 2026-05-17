@@ -7,14 +7,11 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class ComentariosController
 {
-  
     public function listar($cholloId)
     {
-       
         $sesionUsuario = comprobarSesionOpcional();
         $bd            = conexionBaseDatos();
 
-        
         $consultaComentarios = $bd->prepare(
             'SELECT c.id, c.texto, c.votos_positivos, c.votos_negativos, c.creado_en,
                     u.id     AS usuario_id,
@@ -29,10 +26,9 @@ class ComentariosController
         $consultaComentarios->execute(array($cholloId));
         $listaComentarios = $consultaComentarios->fetchAll();
 
-        
         if ($sesionUsuario !== null) {
             $idUsuario = (int) $sesionUsuario['sub'];
-            
+
             for ($i = 0; $i < count($listaComentarios); $i++) {
                 $idComentario = $listaComentarios[$i]['id'];
 
@@ -43,14 +39,9 @@ class ComentariosController
                 $consultaVoto->execute(array($idUsuario, $idComentario));
                 $votoEncontrado = $consultaVoto->fetch();
 
-                if ($votoEncontrado) {
-                    $listaComentarios[$i]['mi_voto'] = $votoEncontrado['tipo'];
-                } else {
-                    $listaComentarios[$i]['mi_voto'] = null;
-                }
+                $listaComentarios[$i]['mi_voto'] = $votoEncontrado ? $votoEncontrado['tipo'] : null;
             }
         } else {
-           
             for ($i = 0; $i < count($listaComentarios); $i++) {
                 $listaComentarios[$i]['mi_voto'] = null;
             }
@@ -58,7 +49,6 @@ class ComentariosController
 
         responderExito(array('comentarios' => $listaComentarios));
     }
-
 
     public function crear($cholloId)
     {
@@ -76,7 +66,6 @@ class ComentariosController
 
         $bd = conexionBaseDatos();
 
-        
         $consultaChollo = $bd->prepare('SELECT id FROM chollos WHERE id = ?');
         $consultaChollo->execute(array($cholloId));
         $cholloExiste = $consultaChollo->fetch();
@@ -97,7 +86,6 @@ class ComentariosController
         );
         $consultaPuntos->execute(array($idUsuario));
 
-        
         $consultaNuevoComentario = $bd->prepare(
             'SELECT c.id, c.texto, c.votos_positivos, c.votos_negativos, c.creado_en,
                     u.id     AS usuario_id,
@@ -111,7 +99,6 @@ class ComentariosController
         $consultaNuevoComentario->execute(array($idNuevoComentario));
         $comentarioCreado = $consultaNuevoComentario->fetch();
 
-        
         $comentarioCreado['mi_voto'] = null;
 
         responderExito(array('comentario' => $comentarioCreado), 'Comentario publicado (+2 puntos)');
@@ -122,6 +109,14 @@ class ComentariosController
         $sesionUsuario = comprobarSesionActiva();
         $bd            = conexionBaseDatos();
 
+        $idSesion = (int) $sesionUsuario['sub'];
+
+        // ── NUEVO: comprobar si el usuario es admin ──
+        $consultaRol = $bd->prepare('SELECT rol FROM usuarios WHERE id = ?');
+        $consultaRol->execute(array($idSesion));
+        $datosRol = $consultaRol->fetch();
+        $esAdmin  = ($datosRol && $datosRol['rol'] === 'admin');
+
         $consultaComentario = $bd->prepare('SELECT usuario_id FROM comentarios WHERE id = ?');
         $consultaComentario->execute(array($idComentario));
         $comentario = $consultaComentario->fetch();
@@ -130,10 +125,10 @@ class ComentariosController
             responderError('No se encontró el comentario', 404);
         }
 
-        $idAutor   = (int) $comentario['usuario_id'];
-        $idSesion  = (int) $sesionUsuario['sub'];
+        $idAutor = (int) $comentario['usuario_id'];
 
-        if ($idAutor !== $idSesion) {
+        // ── MODIFICADO: admin puede eliminar cualquier comentario ──
+        if ($idAutor !== $idSesion && !$esAdmin) {
             responderError('No tienes permiso para borrar este comentario', 403);
         }
 
@@ -171,22 +166,12 @@ class ComentariosController
         $votoPrevio = $consultaVotoPrevio->fetch();
 
         if ($votoPrevio) {
-
             if ($votoPrevio['tipo'] === $tipoVoto) {
                 responderError('Ya has votado este comentario con ese tipo', 409);
             }
 
-            if ($votoPrevio['tipo'] === 'positivo') {
-                $campoBajar = 'votos_positivos';
-            } else {
-                $campoBajar = 'votos_negativos';
-            }
-
-            if ($tipoVoto === 'positivo') {
-                $campoSubir = 'votos_positivos';
-            } else {
-                $campoSubir = 'votos_negativos';
-            }
+            $campoBajar = ($votoPrevio['tipo'] === 'positivo') ? 'votos_positivos' : 'votos_negativos';
+            $campoSubir = ($tipoVoto === 'positivo')           ? 'votos_positivos' : 'votos_negativos';
 
             $consultaCambioVotos = $bd->prepare(
                 "UPDATE comentarios
@@ -202,12 +187,7 @@ class ComentariosController
             $consultaActualizarVoto->execute(array($tipoVoto, $votoPrevio['id']));
 
         } else {
-
-            if ($tipoVoto === 'positivo') {
-                $campoSubir = 'votos_positivos';
-            } else {
-                $campoSubir = 'votos_negativos';
-            }
+            $campoSubir = ($tipoVoto === 'positivo') ? 'votos_positivos' : 'votos_negativos';
 
             $consultaVoto = $bd->prepare(
                 "UPDATE comentarios SET $campoSubir = $campoSubir + 1 WHERE id = ?"
@@ -221,8 +201,7 @@ class ComentariosController
 
             if ($tipoVoto === 'positivo') {
                 $idAutorComentario = (int) $comentario['usuario_id'];
-
-                $consultaPuntos = $bd->prepare(
+                $consultaPuntos    = $bd->prepare(
                     'UPDATE usuarios SET puntos = puntos + 1 WHERE id = ?'
                 );
                 $consultaPuntos->execute(array($idAutorComentario));
@@ -235,12 +214,10 @@ class ComentariosController
         $consultaTotales->execute(array($idComentario));
         $totalesActualizados = $consultaTotales->fetch();
 
-        $respuesta = array(
+        responderExito(array(
             'positivos' => (int) $totalesActualizados['votos_positivos'],
             'negativos' => (int) $totalesActualizados['votos_negativos'],
             'mi_voto'   => $tipoVoto,
-        );
-
-        responderExito($respuesta, 'Voto registrado');
+        ), 'Voto registrado');
     }
 }
