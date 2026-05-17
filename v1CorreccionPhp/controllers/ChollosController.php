@@ -1,6 +1,5 @@
 <?php
 
-
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../middleware/auth.php';
@@ -16,7 +15,7 @@ class ChollosController
         if (isset($_GET['solo_activos']) && $_GET['solo_activos'] === '0') {
             $soloActivos = false;
         } else {
-            $soloActivos = true; 
+            $soloActivos = true;
         }
 
         if ($soloActivos) {
@@ -114,7 +113,6 @@ class ChollosController
             responderError("El campo 'titulo' es obligatorio");
         }
 
-       
         $rutaImagen = isset($data['imagen']) && trim($data['imagen']) !== ''
             ? trim($data['imagen'])
             : "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600";
@@ -152,15 +150,22 @@ class ChollosController
         $data = !empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true);
 
         $bd = conexionBaseDatos();
+
+        // ── NUEVO: comprobar si el usuario es admin ──
+        $consultaRol = $bd->prepare('SELECT rol FROM usuarios WHERE id = ?');
+        $consultaRol->execute(array($idUsuario));
+        $datosRol = $consultaRol->fetch();
+        $esAdmin  = ($datosRol && $datosRol['rol'] === 'admin');
+
         $consultaAutor = $bd->prepare('SELECT usuario_id FROM chollos WHERE id = ?');
         $consultaAutor->execute(array($id));
         $chollo = $consultaAutor->fetch();
 
-        if (!$chollo || (int)$chollo['usuario_id'] !== $idUsuario) {
+        // ── MODIFICADO: admin puede editar cualquier chollo ──
+        if (!$chollo || ((int)$chollo['usuario_id'] !== $idUsuario && !$esAdmin)) {
             responderError('No tienes permiso para editar este chollo', 403);
         }
 
-        
         $consultaUpdate = $bd->prepare(
             'UPDATE chollos SET titulo = ?, descripcion = ?, precio_original = ?, precio_oferta = ?, tienda = ?, enlace = ?, imagen = ? WHERE id = ?'
         );
@@ -186,11 +191,19 @@ class ChollosController
         $idUsuario     = (int) $sesionUsuario['sub'];
 
         $bd = conexionBaseDatos();
+
+        // ── NUEVO: comprobar si el usuario es admin ──
+        $consultaRol = $bd->prepare('SELECT rol FROM usuarios WHERE id = ?');
+        $consultaRol->execute(array($idUsuario));
+        $datosRol = $consultaRol->fetch();
+        $esAdmin  = ($datosRol && $datosRol['rol'] === 'admin');
+
         $consultaAutor = $bd->prepare('SELECT usuario_id FROM chollos WHERE id = ?');
         $consultaAutor->execute(array($id));
         $chollo = $consultaAutor->fetch();
 
-        if (!$chollo || (int)$chollo['usuario_id'] !== $idUsuario) {
+        // ── MODIFICADO: admin puede eliminar cualquier chollo ──
+        if (!$chollo || ((int)$chollo['usuario_id'] !== $idUsuario && !$esAdmin)) {
             responderError('No tienes permiso para eliminar este chollo', 403);
         }
 
