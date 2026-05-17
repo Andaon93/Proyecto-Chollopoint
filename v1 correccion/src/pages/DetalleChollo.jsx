@@ -216,7 +216,7 @@ function DetalleChollo() {
     );
   }
 
-  const esAutor = usuario !== null && chollo.usuarioId === usuario.id;
+  const esAutor = usuario !== null && (chollo.usuarioId === usuario.id || usuario.rol === 'admin');
   const ahorro = (chollo.precioOriginal - chollo.precioOferta).toFixed(2);
   let totalVotos = datosVoto.positivos + datosVoto.negativos || 1;
   const porcentajePositivos = Math.round((datosVoto.positivos / totalVotos) * 100);
