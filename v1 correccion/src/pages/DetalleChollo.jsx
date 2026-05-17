@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Grid, Card, CardContent, Typography, Button,
   Chip, Avatar, TextField, IconButton, LinearProgress, Divider, Tooltip,
-  CircularProgress,
+  CircularProgress, Dialog, DialogTitle, DialogContent, Stack, Snackbar,
 } from "@mui/material";
 import CloseIcon        from "@mui/icons-material/Close";
 import ThumbUpIcon      from "@mui/icons-material/ThumbUp";
@@ -17,6 +17,9 @@ import StoreIcon        from "@mui/icons-material/Store";
 import LocationOnIcon   from "@mui/icons-material/LocationOn";
 import EditIcon         from "@mui/icons-material/Edit";
 import DeleteIcon       from "@mui/icons-material/Delete";
+import WhatsAppIcon     from "@mui/icons-material/WhatsApp";
+import TelegramIcon     from "@mui/icons-material/Telegram";
+import ContentCopyIcon  from "@mui/icons-material/ContentCopy";
 import { useAuth }      from "../context/AuthContext";
 import api              from "../api/client";
 import { normalizeChollo, normalizeComentario } from "../api/utils";
@@ -64,6 +67,8 @@ function DetalleChollo() {
   const [nuevoComentario, setNuevoComentario]   = useState("");
   const [cargando, setCargando]                 = useState(true);
   const [enviandoCom, setEnviandoCom]           = useState(false);
+  const [dialogCompartir, setDialogCompartir]   = useState(false);
+  const [copiadoSnack, setCopiadoSnack]         = useState(false);
 
   useEffect(() => {
     async function fetchChollo() {
@@ -179,8 +184,30 @@ function DetalleChollo() {
     }
   }
 
-  async function handleCompartir() {
-    if (navigator.clipboard !== undefined) await navigator.clipboard.writeText(window.location.href);
+  function handleCompartir() {
+    if (navigator.share) {
+      navigator.share({
+        title: chollo.titulo,
+        text: `¡Mira este chollo! ${chollo.titulo} por solo ${chollo.precioOferta}€`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      setDialogCompartir(true);
+    }
+  }
+
+  async function copiarEnlace() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = window.location.href;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    setCopiadoSnack(true);
   }
 
   function handleIrALaOferta() {
@@ -198,7 +225,6 @@ function DetalleChollo() {
     }
   }
 
-  // ── NUEVO: admin puede eliminar cualquier comentario ──────────────
   async function handleEliminarComentario(idComentario) {
     if (!window.confirm("¿Eliminar este comentario? Esta acción no se puede deshacer.")) return;
     try {
@@ -226,7 +252,6 @@ function DetalleChollo() {
     );
   }
 
-  // ── MODIFICADO: admin también puede editar/eliminar cualquier chollo ──
   const esAutor = usuario !== null && (chollo.usuarioId === usuario.id || usuario.rol === "admin");
   const ahorro = (chollo.precioOriginal - chollo.precioOferta).toFixed(2);
   let totalVotos = datosVoto.positivos + datosVoto.negativos || 1;
@@ -236,6 +261,8 @@ function DetalleChollo() {
   const botonEnviarDesactivado = !usuario || nuevoComentario.trim() === "" || enviandoCom;
   const colorIconoFavorito = favorito ? "#ff5252" : "white";
   const colorBotonFavorito = favorito ? "#ffcdd2" : "white";
+  const urlChollo  = window.location.href;
+  const textoCorto = `¡Mira este chollo! ${chollo.titulo} por solo ${chollo.precioOferta}€`;
 
   return (
     <Box sx={{ pb: 5 }}>
@@ -353,7 +380,6 @@ function DetalleChollo() {
                             <Typography variant="caption" sx={{ fontWeight: "bold", minWidth: 16, textAlign: "center", color: "error.main" }}>
                               {votosCom.negativos}
                             </Typography>
-                            {/* ── NUEVO: botón eliminar comentario visible solo para admin ── */}
                             {usuario?.rol === "admin" && (
                               <Tooltip title="Eliminar comentario (admin)" arrow>
                                 <IconButton size="small" onClick={() => handleEliminarComentario(c.id)}
@@ -380,7 +406,6 @@ function DetalleChollo() {
                 <Typography variant="h3" color="success.main" fontWeight="bold">{chollo.precioOferta}€</Typography>
                 <Typography sx={{ textDecoration: "line-through", color: "text.secondary", mt: 1 }}>{chollo.precioOriginal}€</Typography>
                 <Typography color="error" fontWeight="bold" sx={{ mt: 1 }}>Ahorras {ahorro}€</Typography>
-
                 <Button
                   variant="contained"
                   color="warning"
@@ -437,6 +462,57 @@ function DetalleChollo() {
           </Grid>
         </Grid>
       </Box>
+
+      <Dialog open={dialogCompartir} onClose={() => setDialogCompartir(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: "bold", pb: 1 }}>
+          Compartir chollo
+          <IconButton onClick={() => setDialogCompartir(false)} sx={{ position: "absolute", right: 8, top: 8, color: "text.secondary" }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ pt: 1 }}>
+            <Button
+              fullWidth variant="contained" startIcon={<WhatsAppIcon />}
+              sx={{ bgcolor: "#25D366", "&:hover": { bgcolor: "#1ebe57" }, fontWeight: "bold", justifyContent: "flex-start", borderRadius: 2 }}
+              onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`${textoCorto}\n${urlChollo}`)}`, "_blank", "noopener")}
+            >
+              WhatsApp
+            </Button>
+            <Button
+              fullWidth variant="contained" startIcon={<TelegramIcon />}
+              sx={{ bgcolor: "#0088cc", "&:hover": { bgcolor: "#0077b3" }, fontWeight: "bold", justifyContent: "flex-start", borderRadius: 2 }}
+              onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(urlChollo)}&text=${encodeURIComponent(textoCorto)}`, "_blank", "noopener")}
+            >
+              Telegram
+            </Button>
+            <Button
+              fullWidth variant="contained"
+              startIcon={<Typography sx={{ fontWeight: "bold", fontSize: 15, lineHeight: 1, color: "white" }}>𝕏</Typography>}
+              sx={{ bgcolor: "#000", "&:hover": { bgcolor: "#333" }, fontWeight: "bold", justifyContent: "flex-start", borderRadius: 2 }}
+              onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`¡Chollo! ${chollo.titulo} por ${chollo.precioOferta}€`)}&url=${encodeURIComponent(urlChollo)}`, "_blank", "noopener")}
+            >
+              X (Twitter)
+            </Button>
+            <Divider />
+            <Button
+              fullWidth variant="outlined" startIcon={<ContentCopyIcon />}
+              sx={{ fontWeight: "bold", justifyContent: "flex-start", borderRadius: 2 }}
+              onClick={() => { copiarEnlace(); setDialogCompartir(false); }}
+            >
+              Copiar enlace
+            </Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
+
+      <Snackbar
+        open={copiadoSnack}
+        autoHideDuration={2500}
+        onClose={() => setCopiadoSnack(false)}
+        message="✅ Enlace copiado al portapapeles"
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Box>
   );
 }
