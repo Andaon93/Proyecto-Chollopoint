@@ -183,7 +183,6 @@ function DetalleChollo() {
     if (navigator.clipboard !== undefined) await navigator.clipboard.writeText(window.location.href);
   }
 
- 
   function handleIrALaOferta() {
     if (!chollo.enlace) return;
     window.open(chollo.enlace, "_blank", "noopener,noreferrer");
@@ -196,6 +195,17 @@ function DetalleChollo() {
       navigate("/");
     } catch (error) {
       alert(error.mensaje || "Error al eliminar el chollo");
+    }
+  }
+
+  // ── NUEVO: admin puede eliminar cualquier comentario ──────────────
+  async function handleEliminarComentario(idComentario) {
+    if (!window.confirm("¿Eliminar este comentario? Esta acción no se puede deshacer.")) return;
+    try {
+      await api.comentarios.eliminar(idComentario);
+      setComentarios(prev => prev.filter(c => c.id !== idComentario));
+    } catch (error) {
+      alert(error.mensaje || "Error al eliminar el comentario");
     }
   }
 
@@ -216,7 +226,8 @@ function DetalleChollo() {
     );
   }
 
-  const esAutor = usuario !== null && (chollo.usuarioId === usuario.id || usuario.rol === 'admin');
+  // ── MODIFICADO: admin también puede editar/eliminar cualquier chollo ──
+  const esAutor = usuario !== null && (chollo.usuarioId === usuario.id || usuario.rol === "admin");
   const ahorro = (chollo.precioOriginal - chollo.precioOferta).toFixed(2);
   let totalVotos = datosVoto.positivos + datosVoto.negativos || 1;
   const porcentajePositivos = Math.round((datosVoto.positivos / totalVotos) * 100);
@@ -342,6 +353,15 @@ function DetalleChollo() {
                             <Typography variant="caption" sx={{ fontWeight: "bold", minWidth: 16, textAlign: "center", color: "error.main" }}>
                               {votosCom.negativos}
                             </Typography>
+                            {/* ── NUEVO: botón eliminar comentario visible solo para admin ── */}
+                            {usuario?.rol === "admin" && (
+                              <Tooltip title="Eliminar comentario (admin)" arrow>
+                                <IconButton size="small" onClick={() => handleEliminarComentario(c.id)}
+                                  sx={{ color: "error.main", p: "4px", ml: 1 }}>
+                                  <DeleteIcon sx={{ fontSize: 16 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                           </Box>
                         </Box>
                       </Box>
@@ -361,7 +381,6 @@ function DetalleChollo() {
                 <Typography sx={{ textDecoration: "line-through", color: "text.secondary", mt: 1 }}>{chollo.precioOriginal}€</Typography>
                 <Typography color="error" fontWeight="bold" sx={{ mt: 1 }}>Ahorras {ahorro}€</Typography>
 
-                
                 <Button
                   variant="contained"
                   color="warning"
