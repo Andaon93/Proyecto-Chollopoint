@@ -67,7 +67,7 @@ export default function EditarChollo() {
       try {
         const res = await api.chollos.ver(id);
         const c   = normalizeChollo(res.data.chollo);
-        if (usuario && c.usuarioId !== usuario.id) {
+        if (usuario && c.usuarioId !== usuario.id && usuario.rol !== 'admin') {
           setErrorCarga("No tienes permiso para editar este chollo.");
           setCargandoInicial(false);
           return;
