@@ -13,6 +13,7 @@ import MapIcon         from "@mui/icons-material/Map";
 import AccessTimeIcon  from "@mui/icons-material/AccessTime";
 import FilterListIcon  from "@mui/icons-material/FilterList";
 import CloseIcon       from "@mui/icons-material/Close";
+import SearchIcon      from "@mui/icons-material/Search";
 import { estaExpirado }    from "./PublicarChollo";
 import { normalizeChollo } from "../api/utils";
 import api                 from "../api/client";
@@ -133,6 +134,7 @@ export default function Home() {
   const [todosLosDeals,    setTodosLosDeals]     = useState([]);
   const [cargando,         setCargando]          = useState(true);
   const [filtrosAbiertos,  setFiltrosAbiertos]   = useState(false);
+  const [textoBusqueda,    setTextoBusqueda]     = useState("");
 
   useEffect(() => { setVista("lista"); }, [location.key]);
 
@@ -143,7 +145,6 @@ export default function Home() {
         const res = await api.chollos.listar({ por_pagina: 100, solo_activos: 0 });
         const normalizados = (res.data.chollos || []).map(normalizeChollo);
         setTodosLosDeals(normalizados);
-        setFilteredDeals(normalizados);
       } catch (err) {
         console.error("Error al cargar chollos:", err.message);
       }
@@ -152,21 +153,45 @@ export default function Home() {
     cargarChollos();
   }, []);
 
-  function applyFilters() {
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get("q") || "";
+    setTextoBusqueda(q);
+    aplicarFiltrosConBusqueda(q, selectedCategory, selectedRegion, priceMin, priceMax, orderBy);
+  }, [location.search, todosLosDeals]);
+
+  function aplicarFiltrosConBusqueda(q, categoria, region, min, max, orden) {
     let results = [...todosLosDeals];
-    if (selectedCategory) results = results.filter((d) => d.categoria === selectedCategory);
-    results = results.filter((d) => d.precioOferta >= priceMin && d.precioOferta <= priceMax);
-    if (selectedRegion)       results = results.filter((d) => d.ciudad === selectedRegion);
-    if (orderBy === "priceLow")  results.sort((a, b) => a.precioOferta - b.precioOferta);
-    if (orderBy === "priceHigh") results.sort((a, b) => b.precioOferta - a.precioOferta);
-    if (orderBy === "discount")  results.sort((a, b) => parseInt(b.descuento) - parseInt(a.descuento));
-    if (orderBy === "recent")    results.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
+
+    if (q.trim()) {
+      const termino = q.trim().toLowerCase();
+      results = results.filter((d) =>
+        (d.titulo       && d.titulo.toLowerCase().includes(termino)) ||
+        (d.descripcion  && d.descripcion.toLowerCase().includes(termino)) ||
+        (d.tienda       && d.tienda.toLowerCase().includes(termino)) ||
+        (d.categoria    && d.categoria.toLowerCase().includes(termino)) ||
+        (d.ciudad       && d.ciudad.toLowerCase().includes(termino))
+      );
+    }
+
+    if (categoria) results = results.filter((d) => d.categoria === categoria);
+    results = results.filter((d) => d.precioOferta >= min && d.precioOferta <= max);
+    if (region)            results = results.filter((d) => d.ciudad === region);
+    if (orden === "priceLow")  results.sort((a, b) => a.precioOferta - b.precioOferta);
+    if (orden === "priceHigh") results.sort((a, b) => b.precioOferta - a.precioOferta);
+    if (orden === "discount")  results.sort((a, b) => parseInt(b.descuento) - parseInt(a.descuento));
+    if (orden === "recent")    results.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
+
     setFilteredDeals(results);
+  }
+
+  function applyFilters() {
+    aplicarFiltrosConBusqueda(textoBusqueda, selectedCategory, selectedRegion, priceMin, priceMax, orderBy);
   }
 
   function resetFilters() {
     setSelectedCategory(""); setSelectedRegion(""); setPriceMin(0); setPriceMax(1000); setOrderBy("recent");
-    setFilteredDeals(todosLosDeals);
+    navigate("/");
   }
 
   const activos   = filteredDeals.filter((d) => !estaExpirado(d));
@@ -182,7 +207,24 @@ export default function Home() {
     <Box sx={{ bgcolor: "#f5f5f5", minHeight: "100vh" }}>
       <Container maxWidth="xl" sx={{ pt: 2 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: "bold" }}>Chollos disponibles</Typography>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+              {textoBusqueda
+                ? `Resultados para "${textoBusqueda}"`
+                : "Chollos disponibles"}
+            </Typography>
+            {textoBusqueda && (
+              <Button
+                size="small"
+                startIcon={<CloseIcon />}
+                onClick={() => navigate("/")}
+                sx={{ mt: 0.5, color: "#e53935", fontWeight: "bold", p: 0 }}
+              >
+                Limpiar búsqueda
+              </Button>
+            )}
+          </Box>
+
           <Stack direction="row" spacing={1} alignItems="center">
             <Button variant="outlined" startIcon={<FilterListIcon />} onClick={() => setFiltrosAbiertos(true)}
               sx={{ display: { xs: "flex", md: "none" }, color: "#e53935", borderColor: "#e53935", fontWeight: "bold", borderRadius: 2 }}>
@@ -243,7 +285,17 @@ export default function Home() {
                     )}
                     {activos.length === 0 && expirados.length === 0 && (
                       <Paper sx={{ p: 5, textAlign: "center", borderRadius: 3 }}>
-                        <Typography color="text.secondary">No hay chollos que coincidan con los filtros.</Typography>
+                        <SearchIcon sx={{ fontSize: 48, color: "#ccc", mb: 1 }} />
+                        <Typography color="text.secondary" gutterBottom>
+                          {textoBusqueda
+                            ? `No se encontraron chollos para "${textoBusqueda}"`
+                            : "No hay chollos que coincidan con los filtros."}
+                        </Typography>
+                        {textoBusqueda && (
+                          <Button variant="outlined" color="error" onClick={() => navigate("/")} sx={{ mt: 1 }}>
+                            Ver todos los chollos
+                          </Button>
+                        )}
                       </Paper>
                     )}
                   </Stack>
