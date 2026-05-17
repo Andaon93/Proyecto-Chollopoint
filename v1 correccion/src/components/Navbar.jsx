@@ -1,21 +1,43 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar, Toolbar, Typography, Box, Button,
   TextField, Container, Stack, Avatar, Tooltip,
   IconButton, Drawer, List, ListItem, ListItemButton,
-  ListItemText, Divider,
+  ListItemText, Divider, InputAdornment,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import MenuIcon from "@mui/icons-material/Menu";
-import CloseIcon from "@mui/icons-material/Close";
+import AddIcon    from "@mui/icons-material/Add";
+import MenuIcon   from "@mui/icons-material/Menu";
+import CloseIcon  from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location  = useLocation();
+  const navigate  = useNavigate();
   const { usuario } = useAuth();
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [busqueda, setBusqueda]       = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get("q") || "";
+    setBusqueda(q);
+  }, [location.search]);
+
+  function handleBuscar(e) {
+    e.preventDefault();
+    const texto = busqueda.trim();
+    if (texto) {
+      navigate(`/?q=${encodeURIComponent(texto)}`);
+    } else {
+      navigate("/");
+    }
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter") handleBuscar(e);
+  }
 
   function irA(ruta) {
     navigate(ruta);
@@ -65,7 +87,24 @@ export default function Navbar() {
 
       {location.pathname !== "/login" && (
         <Container sx={{ mt: 1, mb: 0.5 }}>
-          <TextField fullWidth placeholder="Buscar chollos, tiendas, productos..." variant="outlined" sx={{ bgcolor: "white", borderRadius: 2 }} />
+          <TextField
+            fullWidth
+            placeholder="Buscar chollos, tiendas, productos..."
+            variant="outlined"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={handleKeyDown}
+            sx={{ bgcolor: "white", borderRadius: 2 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={handleBuscar} sx={{ color: "#e53935" }}>
+                    <SearchIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
         </Container>
       )}
 
