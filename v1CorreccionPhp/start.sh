@@ -1,4 +1,4 @@
-#!/bin/bash
+
 rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.*
 a2enmod mpm_prefork
 echo "Listen ${PORT:-80}" > /etc/apache2/ports.conf
