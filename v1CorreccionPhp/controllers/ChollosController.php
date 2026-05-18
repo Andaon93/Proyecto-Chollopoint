@@ -151,7 +151,7 @@ class ChollosController
 
         $bd = conexionBaseDatos();
 
-        // ── NUEVO: comprobar si el usuario es admin ──
+        
         $consultaRol = $bd->prepare('SELECT rol FROM usuarios WHERE id = ?');
         $consultaRol->execute(array($idUsuario));
         $datosRol = $consultaRol->fetch();
@@ -161,7 +161,7 @@ class ChollosController
         $consultaAutor->execute(array($id));
         $chollo = $consultaAutor->fetch();
 
-        // ── MODIFICADO: admin puede editar cualquier chollo ──
+        
         if (!$chollo || ((int)$chollo['usuario_id'] !== $idUsuario && !$esAdmin)) {
             responderError('No tienes permiso para editar este chollo', 403);
         }
@@ -192,7 +192,7 @@ class ChollosController
 
         $bd = conexionBaseDatos();
 
-        // ── NUEVO: comprobar si el usuario es admin ──
+        
         $consultaRol = $bd->prepare('SELECT rol FROM usuarios WHERE id = ?');
         $consultaRol->execute(array($idUsuario));
         $datosRol = $consultaRol->fetch();
@@ -202,7 +202,7 @@ class ChollosController
         $consultaAutor->execute(array($id));
         $chollo = $consultaAutor->fetch();
 
-        // ── MODIFICADO: admin puede eliminar cualquier chollo ──
+        
         if (!$chollo || ((int)$chollo['usuario_id'] !== $idUsuario && !$esAdmin)) {
             responderError('No tienes permiso para eliminar este chollo', 403);
         }
