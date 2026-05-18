@@ -101,7 +101,7 @@ export default function Perfil() {
       .finally(() => setCargandoChollos(false));
   }, [usuario]);
 
-  // ✅ Categorías favoritas calculadas en tiempo real desde los chollos del usuario
+  
   const categoriasFavoritas = Object.entries(
     misDeals.reduce((acc, d) => {
       if (d.categoria) acc[d.categoria] = (acc[d.categoria] || 0) + 1;
@@ -370,7 +370,7 @@ export default function Perfil() {
               </Stack>
             )}
 
-            {/* ✅ Categorías favoritas calculadas desde los chollos reales del usuario */}
+            
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>❤️ Categorías favoritas</Typography>
             {cargandoChollos ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress color="error" size={24} /></Box>
