@@ -14,6 +14,7 @@ import AccessTimeIcon  from "@mui/icons-material/AccessTime";
 import FilterListIcon  from "@mui/icons-material/FilterList";
 import CloseIcon       from "@mui/icons-material/Close";
 import SearchIcon      from "@mui/icons-material/Search";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { estaExpirado }    from "./PublicarChollo";
 import { normalizeChollo } from "../api/utils";
 import api                 from "../api/client";
@@ -63,6 +64,7 @@ function DealCard({ deal, onClick }) {
               <Chip icon={<AccessTimeIcon />} label={restante} size="small" color="warning" variant="outlined" />
             </Tooltip>
           )}
+          {!expirado && <Chip icon={<CheckCircleIcon />} label="Activo" size="small" color="success" variant="outlined" />}
           {deal.publicadoPor && <Chip label={`Por ${deal.publicadoPor}`} size="small" variant="outlined" sx={{ fontSize: 11 }} />}
         </Stack>
         <Typography variant="h6" sx={{ fontWeight: "bold" }}>{deal.titulo}</Typography>
@@ -78,7 +80,9 @@ function DealCard({ deal, onClick }) {
 function ContenidoFiltros({
   selectedCategory, setSelectedCategory,
   priceMin, setPriceMin, priceMax, setPriceMax,
-  selectedRegion, setSelectedRegion, orderBy, setOrderBy,
+  selectedRegion, setSelectedRegion,
+  orderBy, setOrderBy,
+  estadoFiltro, setEstadoFiltro,
   applyFilters, resetFilters, onAplicar,
 }) {
   function handleAplicar() { applyFilters(); if (onAplicar) onAplicar(); }
@@ -86,11 +90,36 @@ function ContenidoFiltros({
   return (
     <>
       <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>Filtros</Typography>
+
+      <Typography sx={{ fontWeight: "bold", mb: 1 }}>Estado</Typography>
+      <ToggleButtonGroup
+        value={estadoFiltro}
+        exclusive
+        onChange={(_, v) => { if (v !== null) setEstadoFiltro(v); }}
+        size="small"
+        fullWidth
+        sx={{ mb: 1 }}
+      >
+        <ToggleButton value="todos" sx={{ fontWeight: "bold", fontSize: 12, flex: 1 }}>
+          Todos
+        </ToggleButton>
+        <ToggleButton value="activos" sx={{ fontWeight: "bold", fontSize: 12, flex: 1, "&.Mui-selected": { bgcolor: "#e8f5e9", color: "#2e7d32", "&:hover": { bgcolor: "#c8e6c9" } } }}>
+          ✅ Activos
+        </ToggleButton>
+        <ToggleButton value="expirados" sx={{ fontWeight: "bold", fontSize: 12, flex: 1, "&.Mui-selected": { bgcolor: "#f5f5f5", color: "#757575", "&:hover": { bgcolor: "#eeeeee" } } }}>
+          ⏰ Expirados
+        </ToggleButton>
+      </ToggleButtonGroup>
+
+      <Divider sx={{ my: 2 }} />
+
       <Typography sx={{ fontWeight: "bold", mb: 1 }}>Categoría</Typography>
       <RadioGroup value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
         {categories.map((cat) => <FormControlLabel key={cat} value={cat} control={<Radio />} label={cat} />)}
       </RadioGroup>
+
       <Divider sx={{ my: 2 }} />
+
       <Typography sx={{ fontWeight: "bold", mb: 1 }}>Precio</Typography>
       <Slider value={[priceMin, priceMax]} onChange={(_, v) => { if (Array.isArray(v)) { setPriceMin(v[0]); setPriceMax(v[1]); } }}
         valueLabelDisplay="auto" min={0} max={1000} />
@@ -98,13 +127,17 @@ function ContenidoFiltros({
         <TextField label="Mín" size="small" type="number" value={priceMin} onChange={(e) => setPriceMin(Number(e.target.value))} fullWidth />
         <TextField label="Máx" size="small" type="number" value={priceMax} onChange={(e) => setPriceMax(Number(e.target.value))} fullWidth />
       </Stack>
+
       <Divider sx={{ my: 2 }} />
+
       <Typography sx={{ fontWeight: "bold", mb: 1 }}>Ubicación</Typography>
       <Select fullWidth size="small" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} displayEmpty>
         <MenuItem value=""><em>Todas las provincias</em></MenuItem>
         {regions.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
       </Select>
+
       <Divider sx={{ my: 2 }} />
+
       <Typography sx={{ fontWeight: "bold", mb: 1 }}>Ordenar por</Typography>
       <Select fullWidth size="small" value={orderBy} onChange={(e) => setOrderBy(e.target.value)}>
         <MenuItem value="recent">Más recientes</MenuItem>
@@ -112,6 +145,7 @@ function ContenidoFiltros({
         <MenuItem value="priceLow">Precio más bajo</MenuItem>
         <MenuItem value="priceHigh">Precio más alto</MenuItem>
       </Select>
+
       <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
         <Button fullWidth variant="contained" onClick={handleAplicar} sx={{ borderRadius: 5 }}>Aplicar</Button>
         <Button fullWidth variant="outlined" onClick={resetFilters} sx={{ borderRadius: 5 }}>Limpiar</Button>
@@ -130,6 +164,7 @@ export default function Home() {
   const [priceMin,         setPriceMin]          = useState(0);
   const [priceMax,         setPriceMax]          = useState(1000);
   const [orderBy,          setOrderBy]           = useState("recent");
+  const [estadoFiltro,     setEstadoFiltro]      = useState("todos");
   const [filteredDeals,    setFilteredDeals]     = useState([]);
   const [todosLosDeals,    setTodosLosDeals]     = useState([]);
   const [cargando,         setCargando]          = useState(true);
@@ -157,26 +192,29 @@ export default function Home() {
     const params = new URLSearchParams(location.search);
     const q = params.get("q") || "";
     setTextoBusqueda(q);
-    aplicarFiltrosConBusqueda(q, selectedCategory, selectedRegion, priceMin, priceMax, orderBy);
+    aplicarFiltrosConBusqueda(q, selectedCategory, selectedRegion, priceMin, priceMax, orderBy, estadoFiltro);
   }, [location.search, todosLosDeals]);
 
-  function aplicarFiltrosConBusqueda(q, categoria, region, min, max, orden) {
+  function aplicarFiltrosConBusqueda(q, categoria, region, min, max, orden, estado) {
     let results = [...todosLosDeals];
 
     if (q.trim()) {
       const termino = q.trim().toLowerCase();
       results = results.filter((d) =>
-        (d.titulo       && d.titulo.toLowerCase().includes(termino)) ||
-        (d.descripcion  && d.descripcion.toLowerCase().includes(termino)) ||
-        (d.tienda       && d.tienda.toLowerCase().includes(termino)) ||
-        (d.categoria    && d.categoria.toLowerCase().includes(termino)) ||
-        (d.ciudad       && d.ciudad.toLowerCase().includes(termino))
+        (d.titulo      && d.titulo.toLowerCase().includes(termino)) ||
+        (d.descripcion && d.descripcion.toLowerCase().includes(termino)) ||
+        (d.tienda      && d.tienda.toLowerCase().includes(termino)) ||
+        (d.categoria   && d.categoria.toLowerCase().includes(termino)) ||
+        (d.ciudad      && d.ciudad.toLowerCase().includes(termino))
       );
     }
 
+    if (estado === "activos")   results = results.filter((d) => !estaExpirado(d));
+    if (estado === "expirados") results = results.filter((d) => estaExpirado(d));
+
     if (categoria) results = results.filter((d) => d.categoria === categoria);
     results = results.filter((d) => d.precioOferta >= min && d.precioOferta <= max);
-    if (region)            results = results.filter((d) => d.ciudad === region);
+    if (region)           results = results.filter((d) => d.ciudad === region);
     if (orden === "priceLow")  results.sort((a, b) => a.precioOferta - b.precioOferta);
     if (orden === "priceHigh") results.sort((a, b) => b.precioOferta - a.precioOferta);
     if (orden === "discount")  results.sort((a, b) => parseInt(b.descuento) - parseInt(a.descuento));
@@ -186,11 +224,16 @@ export default function Home() {
   }
 
   function applyFilters() {
-    aplicarFiltrosConBusqueda(textoBusqueda, selectedCategory, selectedRegion, priceMin, priceMax, orderBy);
+    aplicarFiltrosConBusqueda(textoBusqueda, selectedCategory, selectedRegion, priceMin, priceMax, orderBy, estadoFiltro);
   }
 
   function resetFilters() {
-    setSelectedCategory(""); setSelectedRegion(""); setPriceMin(0); setPriceMax(1000); setOrderBy("recent");
+    setSelectedCategory("");
+    setSelectedRegion("");
+    setPriceMin(0);
+    setPriceMax(1000);
+    setOrderBy("recent");
+    setEstadoFiltro("todos");
     navigate("/");
   }
 
@@ -198,10 +241,18 @@ export default function Home() {
   const expirados = filteredDeals.filter((d) => estaExpirado(d));
 
   const filtrosProps = {
-    selectedCategory, setSelectedCategory, priceMin, setPriceMin,
-    priceMax, setPriceMax, selectedRegion, setSelectedRegion,
-    orderBy, setOrderBy, applyFilters, resetFilters,
+    selectedCategory, setSelectedCategory,
+    priceMin, setPriceMin,
+    priceMax, setPriceMax,
+    selectedRegion, setSelectedRegion,
+    orderBy, setOrderBy,
+    estadoFiltro, setEstadoFiltro,
+    applyFilters, resetFilters,
   };
+
+  const etiquetaEstado =
+    estadoFiltro === "activos"   ? " activos" :
+    estadoFiltro === "expirados" ? " expirados" : "";
 
   return (
     <Box sx={{ bgcolor: "#f5f5f5", minHeight: "100vh" }}>
@@ -211,7 +262,7 @@ export default function Home() {
             <Typography variant="h6" sx={{ fontWeight: "bold" }}>
               {textoBusqueda
                 ? `Resultados para "${textoBusqueda}"`
-                : "Chollos disponibles"}
+                : `Chollos${etiquetaEstado} disponibles`}
             </Typography>
             {textoBusqueda && (
               <Button
@@ -266,16 +317,30 @@ export default function Home() {
               ) : (
                 <>
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    {activos.length} {activos.length === 1 ? "chollo activo" : "chollos activos"}
-                    {expirados.length > 0 && (
-                      <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                        · {expirados.length} expirado{expirados.length > 1 ? "s" : ""}
-                      </Typography>
+                    {estadoFiltro === "todos" && (
+                      <>
+                        {activos.length} {activos.length === 1 ? "chollo activo" : "chollos activos"}
+                        {expirados.length > 0 && (
+                          <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                            · {expirados.length} expirado{expirados.length > 1 ? "s" : ""}
+                          </Typography>
+                        )}
+                      </>
+                    )}
+                    {estadoFiltro === "activos" && (
+                      <>{activos.length} {activos.length === 1 ? "chollo activo" : "chollos activos"}</>
+                    )}
+                    {estadoFiltro === "expirados" && (
+                      <>{expirados.length} {expirados.length === 1 ? "chollo expirado" : "chollos expirados"}</>
                     )}
                   </Typography>
+
                   <Stack spacing={3}>
-                    {activos.map((deal) => <DealCard key={deal.id} deal={deal} onClick={() => navigate(`/chollo/${deal.id}`)} />)}
-                    {expirados.length > 0 && (
+                    {estadoFiltro !== "expirados" && activos.map((deal) => (
+                      <DealCard key={deal.id} deal={deal} onClick={() => navigate(`/chollo/${deal.id}`)} />
+                    ))}
+
+                    {estadoFiltro === "todos" && expirados.length > 0 && (
                       <>
                         <Divider>
                           <Chip icon={<AccessTimeIcon />} label="Chollos expirados (más de 24h)" size="small" sx={{ bgcolor: "#e0e0e0", color: "#757575" }} />
@@ -283,7 +348,12 @@ export default function Home() {
                         {expirados.map((deal) => <DealCard key={deal.id} deal={deal} />)}
                       </>
                     )}
-                    {activos.length === 0 && expirados.length === 0 && (
+
+                    {estadoFiltro === "expirados" && expirados.map((deal) => (
+                      <DealCard key={deal.id} deal={deal} />
+                    ))}
+
+                    {filteredDeals.length === 0 && (
                       <Paper sx={{ p: 5, textAlign: "center", borderRadius: 3 }}>
                         <SearchIcon sx={{ fontSize: 48, color: "#ccc", mb: 1 }} />
                         <Typography color="text.secondary" gutterBottom>
