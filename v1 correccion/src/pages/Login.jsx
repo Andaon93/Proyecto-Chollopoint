@@ -35,11 +35,6 @@ export default function Login() {
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          <Alert severity="info" sx={{ mb: 3 }}>
-            <strong>Usuarios de prueba:</strong><br />
-            carlos@ejemplo.com / 1234<br />
-            ana@ejemplo.com / 1234
-          </Alert>
 
           <Box component="form" onSubmit={handleSubmit}>
             <TextField fullWidth label="Correo" type="email" margin="normal" value={email} onChange={(e) => setEmail(e.target.value)} required />
