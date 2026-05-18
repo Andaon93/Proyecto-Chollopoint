@@ -67,7 +67,7 @@ export default function EditarChollo() {
       try {
         const res = await api.chollos.ver(id);
         const c   = normalizeChollo(res.data.chollo);
-        // ── MODIFICADO: admin puede editar cualquier chollo ──
+        
         if (usuario && c.usuarioId !== usuario.id && usuario.rol !== "admin") {
           setErrorCarga("No tienes permiso para editar este chollo.");
           setCargandoInicial(false);
@@ -192,7 +192,7 @@ export default function EditarChollo() {
           Volver al chollo
         </Button>
         <Typography variant="h4" fontWeight="bold">✏️ Editar chollo</Typography>
-        {/* Badge visual para que el admin sepa que está en modo admin */}
+        
         {usuario.rol === "admin" && (
           <Chip label="Modo Admin" color="error" size="small" sx={{ fontWeight: "bold" }} />
         )}
