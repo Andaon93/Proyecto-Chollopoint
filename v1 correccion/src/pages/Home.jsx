@@ -83,10 +83,8 @@ function ContenidoFiltros({
   selectedRegion, setSelectedRegion,
   orderBy, setOrderBy,
   estadoFiltro, setEstadoFiltro,
-  applyFilters, resetFilters, onAplicar,
+  resetFilters, onAplicar,
 }) {
-  function handleAplicar() { applyFilters(); if (onAplicar) onAplicar(); }
-
   return (
     <>
       <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>Filtros</Typography>
@@ -95,7 +93,7 @@ function ContenidoFiltros({
       <ToggleButtonGroup
         value={estadoFiltro}
         exclusive
-        onChange={(_, v) => { if (v !== null) setEstadoFiltro(v); }}
+        onChange={(_, v) => { if (v !== null) setEstadoFiltro(v); if (onAplicar) onAplicar(); }}
         size="small"
         fullWidth
         sx={{ mb: 1 }}
@@ -147,8 +145,9 @@ function ContenidoFiltros({
       </Select>
 
       <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-        <Button fullWidth variant="contained" onClick={handleAplicar} sx={{ borderRadius: 5 }}>Aplicar</Button>
-        <Button fullWidth variant="outlined" onClick={resetFilters} sx={{ borderRadius: 5 }}>Limpiar</Button>
+        <Button fullWidth variant="outlined" onClick={() => { resetFilters(); if (onAplicar) onAplicar(); }} sx={{ borderRadius: 5 }}>
+          Limpiar
+        </Button>
       </Stack>
     </>
   );
@@ -192,14 +191,13 @@ export default function Home() {
     const params = new URLSearchParams(location.search);
     const q = params.get("q") || "";
     setTextoBusqueda(q);
-    aplicarFiltrosConBusqueda(q, selectedCategory, selectedRegion, priceMin, priceMax, orderBy, estadoFiltro);
-  }, [location.search, todosLosDeals]);
+  }, [location.search]);
 
-  function aplicarFiltrosConBusqueda(q, categoria, region, min, max, orden, estado) {
+  useEffect(() => {
     let results = [...todosLosDeals];
 
-    if (q.trim()) {
-      const termino = q.trim().toLowerCase();
+    if (textoBusqueda.trim()) {
+      const termino = textoBusqueda.trim().toLowerCase();
       results = results.filter((d) =>
         (d.titulo      && d.titulo.toLowerCase().includes(termino)) ||
         (d.descripcion && d.descripcion.toLowerCase().includes(termino)) ||
@@ -209,23 +207,19 @@ export default function Home() {
       );
     }
 
-    if (estado === "activos")   results = results.filter((d) => !estaExpirado(d));
-    if (estado === "expirados") results = results.filter((d) => estaExpirado(d));
+    if (estadoFiltro === "activos")   results = results.filter((d) => !estaExpirado(d));
+    if (estadoFiltro === "expirados") results = results.filter((d) => estaExpirado(d));
 
-    if (categoria) results = results.filter((d) => d.categoria === categoria);
-    results = results.filter((d) => d.precioOferta >= min && d.precioOferta <= max);
-    if (region)           results = results.filter((d) => d.ciudad === region);
-    if (orden === "priceLow")  results.sort((a, b) => a.precioOferta - b.precioOferta);
-    if (orden === "priceHigh") results.sort((a, b) => b.precioOferta - a.precioOferta);
-    if (orden === "discount")  results.sort((a, b) => parseInt(b.descuento) - parseInt(a.descuento));
-    if (orden === "recent")    results.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
+    if (selectedCategory) results = results.filter((d) => d.categoria === selectedCategory);
+    results = results.filter((d) => d.precioOferta >= priceMin && d.precioOferta <= priceMax);
+    if (selectedRegion)        results = results.filter((d) => d.ciudad === selectedRegion);
+    if (orderBy === "priceLow")  results.sort((a, b) => a.precioOferta - b.precioOferta);
+    if (orderBy === "priceHigh") results.sort((a, b) => b.precioOferta - a.precioOferta);
+    if (orderBy === "discount")  results.sort((a, b) => parseInt(b.descuento) - parseInt(a.descuento));
+    if (orderBy === "recent")    results.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
     setFilteredDeals(results);
-  }
-
-  function applyFilters() {
-    aplicarFiltrosConBusqueda(textoBusqueda, selectedCategory, selectedRegion, priceMin, priceMax, orderBy, estadoFiltro);
-  }
+  }, [todosLosDeals, textoBusqueda, estadoFiltro, selectedCategory, selectedRegion, priceMin, priceMax, orderBy]);
 
   function resetFilters() {
     setSelectedCategory("");
@@ -247,7 +241,7 @@ export default function Home() {
     selectedRegion, setSelectedRegion,
     orderBy, setOrderBy,
     estadoFiltro, setEstadoFiltro,
-    applyFilters, resetFilters,
+    resetFilters,
   };
 
   const etiquetaEstado =
