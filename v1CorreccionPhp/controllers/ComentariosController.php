@@ -111,7 +111,7 @@ class ComentariosController
 
         $idSesion = (int) $sesionUsuario['sub'];
 
-        // ── NUEVO: comprobar si el usuario es admin ──
+       
         $consultaRol = $bd->prepare('SELECT rol FROM usuarios WHERE id = ?');
         $consultaRol->execute(array($idSesion));
         $datosRol = $consultaRol->fetch();
@@ -127,7 +127,7 @@ class ComentariosController
 
         $idAutor = (int) $comentario['usuario_id'];
 
-        // ── MODIFICADO: admin puede eliminar cualquier comentario ──
+       
         if ($idAutor !== $idSesion && !$esAdmin) {
             responderError('No tienes permiso para borrar este comentario', 403);
         }
