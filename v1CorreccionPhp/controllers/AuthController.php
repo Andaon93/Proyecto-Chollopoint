@@ -105,8 +105,7 @@ class AuthController
     private function buscarUsuarioPorId($idUsuario)
     {
         $bd = conexionBaseDatos();
- 
-        // ── CORREGIDO: se añade 'rol' para que el frontend sepa si es admin ──
+
         $consulta = $bd->prepare(
             'SELECT id, nombre, alias, email, avatar, puntos,
                     bio, ciudad, provincia, telefono, fecha_nac,
